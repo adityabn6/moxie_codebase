@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+
+# Output Data (Do not commit patient data)
+processed_*.csv
+events_*.csv
+events.csv
+output/
+
+# Generated Catalog
+processing_catalog.csv
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
