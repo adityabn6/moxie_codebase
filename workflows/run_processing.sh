@@ -1,23 +1,47 @@
 #!/bin/bash
 # Layer 2: Signal Processing (Slurm Array Execution)
-# Usage: sbatch --array=1-N ./run_processing.sh <Catalog_File> <Output_Root>
-# Or locally: ./run_processing.sh <Catalog_File> <Output_Root> <Row_Index>
+# Usage: sbatch --array=1-N run_processing.sh <Catalog_File> <Output_Root>
 
-CATALOG_FILE=$1
-OUTPUT_ROOT=$2
+#SBATCH --job-name=moxie_processing
+#SBATCH --mail-type=BEGIN,END
+#SBATCH --mail-user=adityabn@umich.edu
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8g
+#SBATCH --time=00:45:00
+#SBATCH --account=sungchoi99
+#SBATCH --partition=standard
+#SBATCH --output=%x-%A_%a.log
+#SBATCH --array=1-200
+
+# --- CONFIGURATION & ENVIRONMENT ---
+# Load variables from cluster_config.sh
+# Note: Since this script runs from OnDemand's temporary job dir, we point to the absolute path.
+CONFIG_FILE="/home/adityabn/Projects/moxie_codebase/workflows/cluster_config.sh"
+
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
+else
+    echo "Error: Config file not found at $CONFIG_FILE"
+    exit 1
+fi
+
+module load python
+source "$VENV_PATH/bin/activate"
+# -----------------------------------
+
 ROW_INDEX=$SLURM_ARRAY_TASK_ID
 
 # Allow local override
 if [ -z "$ROW_INDEX" ]; then
-    ROW_INDEX=$3
+    ROW_INDEX=$1
 fi
 
-if [ -z "$CATALOG_FILE" ] || [ -z "$OUTPUT_ROOT" ] || [ -z "$ROW_INDEX" ]; then
-    echo "Usage: $0 <Catalog_File> <Output_Root> [Row_Index (if not Slurm)]"
+if [ -z "$ROW_INDEX" ]; then
+    echo "Error: SLURM_ARRAY_TASK_ID not set."
     exit 1
 fi
-
-SCRIPT_DIR="$(dirname "$0")/../processing"
 
 # Read Catalog Row
 # Catalog Cols: participant_id,visit_type,device,modality,file_path
@@ -26,8 +50,8 @@ SCRIPT_DIR="$(dirname "$0")/../processing"
 LINE=$(tail -n +2 "$CATALOG_FILE" | sed -n "${ROW_INDEX}p")
 
 if [ -z "$LINE" ]; then
-    echo "Error: Row $ROW_INDEX empty in catalog."
-    exit 1
+    echo "Row $ROW_INDEX is empty (End of Catalog). Exiting successfully."
+    exit 0
 fi
 
 # Parse CSV line (Handling potential commas in quotes? Simple CSV assumption here)
