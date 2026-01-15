@@ -111,6 +111,9 @@ elif [ "$DEVICE" == "hexoskin" ]; then
     CMD="$CMD --hex_path \"$FILE_PATH\""
 fi
 
+# Append output directory argument
+CMD="$CMD --output_dir \"$OUTPUT_DIR\""
+
 echo "Running: $CMD"
 eval $CMD
 

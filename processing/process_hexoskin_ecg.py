@@ -143,6 +143,7 @@ def main():
     parser.add_argument("--visit_type", required=True)
     parser.add_argument("--hex_path", required=True)
     parser.add_argument("--events_file", required=False, help="Path to events CSV file")
+    parser.add_argument("--output_dir", required=True)
     
     args = parser.parse_args()
     
@@ -168,7 +169,8 @@ def main():
         # Hexoskin output usually doesn't need 'Participant' column IN the csv if 
         # it's a time series file. It's in the filename.
         
-        output_file = f"processed_hex_ecg_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
+        output_filename = f"processed_hex_ecg_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
+        output_file = os.path.join(args.output_dir, output_filename)
         results.to_csv(output_file, index=False)
         print(f"Processed signals saved to {output_file}")
 
