@@ -35,37 +35,40 @@ moxie_codebase/
     pip install -r requirements.txt
     ```
 
-## 🚀 Usage
-
-The pipeline runs in **two sequential layers**, driven by a master catalog.
-
-### Step 0: Generate Catalog
-Scan your raw data directory to create a processing catalog. This catalog defines every "job" (one modality per participant/visit).
-
-```bash
-python utils/generate_catalog.py
-```
-*Output: `processing_catalog.csv`*
-
-### Step 1: Layer 1 - Event Extraction
-Extracts digital markers to create `events.csv` and sets up the output directory structure. This **must** run before signal processing.
-
-```bash
-bash workflows/run_events.sh <Data_Source_Root> <Output_Root>
-```
-
-### Step 2: Layer 2 - Signal Processing
-Runs the specific processing script for each row in the catalog. Designed for Slurm Arrays but can run locally.
-
-**Slurm Usage:**
-```bash
-sbatch --array=1-N workflows/run_processing.sh processing_catalog.csv <Output_Root>
-```
-
-**Local Usage:**
-```bash
-bash workflows/run_processing.sh processing_catalog.csv <Output_Root> <Catalog_Row_Index>
-```
+## 🚀 Cluster Execution (Greatlakes)
+40: 
+41: The pipeline is designed to run on the University of Michigan Greatlakes cluster using the Open OnDemand Job Composer. It operates in two sequential layers.
+42: 
+43: ### 1. Configuration
+44: The workflow paths are defined in `workflows/cluster_config.sh`.
+45: *   **PROJECT_ROOT**: `/home/adityabn/Projects/moxie_codebase`
+46: *   **VENV_PATH**: `$PROJECT_ROOT/.venv`
+47: 
+48: ### 2. Execution Steps
+49: Do NOT run python scripts manually. Use the Bash workflows.
+50: 
+51: **Step 1: Generate Catalog (One-time)**
+52: Ensure `processing_catalog.csv` exists in the project root. If not, run:
+53: ```bash
+54: python utils/generate_catalog.py
+55: ```
+56: 
+57: **Step 2: Layer 1 - Event Extraction**
+58: 1.  Open OnDemand **Job Composer**.
+59: 2.  Create a new job and upload `workflows/run_events.sh`.
+60: 3.  Click **Submit**.
+61:     *   *What it does:* Scans all Acqknowledge files, extracts event markers, and creates the folder structure in `Processed_Data/`.
+62: 
+63: **Step 3: Layer 2 - Signal Processing**
+64: 1.  Wait for Layer 1 to finish.
+65: 2.  Create a new job and upload `workflows/run_processing.sh`.
+66: 3.  Click **Submit**.
+67:     *   *What it does:* Reads `processing_catalog.csv` and launches a parallel Array Job (up to 200 tasks) to process every modality (ECG, EDA, RSP, etc.) independently.
+68:     *   *Output:* CSV files are saved to `Processed_Data/<PID>/<Visit>/`.
+69: 
+70: ### 3. Monitoring
+71: *   Check the `.log` files in your job folder for progress.
+72: *   If a row in the catalog is empty (job index > number of files), the job will exit successfully with "End of Catalog".
 
 ## 📊 Output Format
 Data is saved to `<Output_Root>/<Participant_ID>/<Visit_Type>/`:
