@@ -10,7 +10,11 @@ def load_data(processed_file, events_file):
     """
     print(f"Loading processed data: {processed_file}")
     try:
-        bp_df = pd.read_csv(processed_file)
+        # Optimization: Read header first to exclude 'Event_Label' (mixed types, unused)
+        header = pd.read_csv(processed_file, nrows=0).columns
+        cols_to_use = [c for c in header if 'Event_Label' not in c]
+        
+        bp_df = pd.read_csv(processed_file, usecols=cols_to_use)
     except Exception as e:
         print(f"Error reading processed file: {e}")
         sys.exit(1)

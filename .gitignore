@@ -7,6 +7,7 @@ processed_*.csv
 events_*.csv
 events.csv
 output/
+Analysis_Ready/
 
 # Generated Catalog
 processing_catalog.csv

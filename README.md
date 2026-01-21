@@ -11,9 +11,13 @@ moxie_codebase/
 │   ├── process_acq_*.py     # Acqknowledge processing (ECG, EDA, RSP, BP, EMG)
 │   └── process_hexoskin_*.py# Hexoskin processing (ECG, RSP)
 │
+├── features_extraction/     # Feature extraction scripts for RL Analysis
+│   └── features_acq_*.py    # Extract State (ECG/EDA), Action (RSP), Reward (BP) features
+│
 ├── workflows/               # Bash automation scripts (Pipeline Layers)
 │   ├── run_events.sh        # Layer 1: Extraction & Directory Setup
-│   └── run_processing.sh    # Layer 2: Signal Processing (Slurm Array compatible)
+│   ├── run_processing.sh    # Layer 2: Signal Processing (Slurm Array compatible)
+│   └── run_features.sh      # Layer 3: Feature Extraction
 │
 ├── verification/            # Quality Control & Verification tools
 │   └── verify_*.py          # Scripts to generate QC plots and stats
@@ -65,6 +69,21 @@ moxie_codebase/
 66: 3.  Click **Submit**.
 67:     *   *What it does:* Reads `processing_catalog.csv` and launches a parallel Array Job (up to 200 tasks) to process every modality (ECG, EDA, RSP, etc.) independently.
 68:     *   *Output:* CSV files are saved to `Processed_Data/<PID>/<Visit>/`.
+
+**Step 4: Layer 3 - Feature Extraction**
+1.  Wait for Layer 2 to finish.
+2.  Create a new job and upload `workflows/run_features.sh`.
+3.  Click **Submit**.
+    *   *What it does:* extracts windowed (1s) and event-based features from the processed signals.
+    *   *Output:* CSV feature files are saved to `Processed_Data/<PID>/<Visit>/`.
+
+**Step 5: Analysis Data Collection**
+To gather all feature CSVs into a single directory for analysis (e.g., RL training):
+```bash
+python utils/collect_features.py <Source_Dir> <Dest_Dir>
+# Example:
+# python utils/collect_features.py Processed_Data Analysis_Ready
+```
 69: 
 70: ### 3. Monitoring
 71: *   Check the `.log` files in your job folder for progress.
@@ -78,6 +97,7 @@ Data is saved to `<Output_Root>/<Participant_ID>/<Visit_Type>/`:
 *   `processed_rsp_*.csv`: Respiration rate, clean signals (Thoracic/Abdominal).
 *   `processed_bp_*.csv`: Systolic/Diastolic peaks, BP rate.
 *   `processed_emg_*.csv`: EMG amplitude envelopes, activity bursts.
+*   `features_*_*.csv`: Extracted feature sets (Event-based and Windowed).
 
 ## ✅ Verification
 To verify the quality of processed data, use the scripts in `verification/`.
