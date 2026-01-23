@@ -40,35 +40,34 @@ moxie_codebase/
     ```
 
 ## 🚀 Cluster Execution (Greatlakes)
-40: 
-41: The pipeline is designed to run on the University of Michigan Greatlakes cluster using the Open OnDemand Job Composer. It operates in two sequential layers.
-42: 
-43: ### 1. Configuration
-44: The workflow paths are defined in `workflows/cluster_config.sh`.
-45: *   **PROJECT_ROOT**: `/home/adityabn/Projects/moxie_codebase`
-46: *   **VENV_PATH**: `$PROJECT_ROOT/.venv`
-47: 
-48: ### 2. Execution Steps
-49: Do NOT run python scripts manually. Use the Bash workflows.
-50: 
-51: **Step 1: Generate Catalog (One-time)**
-52: Ensure `processing_catalog.csv` exists in the project root. If not, run:
-53: ```bash
-54: python utils/generate_catalog.py
-55: ```
-56: 
-57: **Step 2: Layer 1 - Event Extraction**
-58: 1.  Open OnDemand **Job Composer**.
-59: 2.  Create a new job and upload `workflows/run_events.sh`.
-60: 3.  Click **Submit**.
-61:     *   *What it does:* Scans all Acqknowledge files, extracts event markers, and creates the folder structure in `Processed_Data/`.
-62: 
-63: **Step 3: Layer 2 - Signal Processing**
-64: 1.  Wait for Layer 1 to finish.
-65: 2.  Create a new job and upload `workflows/run_processing.sh`.
-66: 3.  Click **Submit**.
-67:     *   *What it does:* Reads `processing_catalog.csv` and launches a parallel Array Job (up to 200 tasks) to process every modality (ECG, EDA, RSP, etc.) independently.
-68:     *   *Output:* CSV files are saved to `Processed_Data/<PID>/<Visit>/`.
+The pipeline is designed to run on the University of Michigan Greatlakes cluster using the Open OnDemand Job Composer. It operates in two sequential layers.
+
+### 1. Configuration
+The workflow paths are defined in `workflows/cluster_config.sh`.
+*   **PROJECT_ROOT**: `/home/adityabn/Projects/moxie_codebase`
+*   **VENV_PATH**: `$PROJECT_ROOT/.venv`
+
+### 2. Execution Steps
+Do NOT run python scripts manually. Use the Bash workflows.
+
+**Step 1: Generate Catalog (One-time)**
+Ensure `processing_catalog.csv` exists in the project root. If not, run:
+```bash
+python utils/generate_catalog.py
+ ```
+
+**Step 2: Layer 1 - Event Extraction**
+1.  Open OnDemand **Job Composer**.
+2.  Create a new job and upload `workflows/run_events.sh`.
+3.  Click **Submit**.
+    *   *What it does:* Scans all Acqknowledge files, extracts event markers, and creates the folder structure in `Processed_Data/`.
+
+**Step 3: Layer 2 - Signal Processing**
+1.  Wait for Layer 1 to finish.
+2.  Create a new job and upload `workflows/run_processing.sh`.
+3.  Click **Submit**.
+    *   *What it does:* Reads `processing_catalog.csv` and launches a parallel Array Job (up to 200 tasks) to process every modality (ECG, EDA, RSP, etc.) independently.
+    *   *Output:* CSV files are saved to `Processed_Data/<PID>/<Visit>/`.
 
 **Step 4: Layer 3 - Feature Extraction**
 1.  Wait for Layer 2 to finish.
@@ -84,10 +83,10 @@ python utils/collect_features.py <Source_Dir> <Dest_Dir>
 # Example:
 # python utils/collect_features.py Processed_Data Analysis_Ready
 ```
-69: 
-70: ### 3. Monitoring
-71: *   Check the `.log` files in your job folder for progress.
-72: *   If a row in the catalog is empty (job index > number of files), the job will exit successfully with "End of Catalog".
+
+### 3. Monitoring
+ *   Check the `.log` files in your job folder for progress.
+ *   If a row in the catalog is empty (job index > number of files), the job will exit successfully with "End of Catalog".
 
 ## 📊 Output Format
 Data is saved to `<Output_Root>/<Participant_ID>/<Visit_Type>/`:
