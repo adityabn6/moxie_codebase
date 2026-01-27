@@ -68,6 +68,20 @@ def scan_participants_modality_based(root_dir):
                         except:
                             pass
 
+                # --- THOUGHT LISTING ---
+                thought_path = os.path.join(visit_path, "Thought Listing")
+                if os.path.exists(thought_path):
+                    # Find all .wav files
+                    wav_files = glob.glob(os.path.join(thought_path, "*.wav"))
+                    for wav_file in wav_files:
+                        catalog_data.append({
+                            "participant_id": pid,
+                            "visit_type": visit,
+                            "device": "Audio",
+                            "modality": "Thoughts",
+                            "file_path": wav_file
+                        })
+
     return pd.DataFrame(catalog_data)
 
 if __name__ == "__main__":
