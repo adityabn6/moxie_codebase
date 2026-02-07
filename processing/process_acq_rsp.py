@@ -1,6 +1,9 @@
 import argparse
 import pandas as pd
 import numpy as np
+from datetime import datetime
+import re
+from zoneinfo import ZoneInfo
 
 # Monkey-patch numpy for neurokit2 compatibility with numpy 2.0
 if not hasattr(np, 'trapz'):
@@ -15,6 +18,24 @@ import neurokit2 as nk
 import sys
 import os
 
+def extract_unix_time(line: str) -> float:
+    match = re.search(
+        r'\b[A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2} \d{4} \d{2}:\d{2}:\d{2}\.\d{3}',
+        line
+    )
+    if not match:
+        raise ValueError("No timestamp found in line")
+
+    timestamp_str = match.group(0)
+
+    dt_naive = datetime.strptime(
+        timestamp_str, "%a %b %d %Y %H:%M:%S.%f"
+    )
+
+    # Attach Eastern Time zone (handles EST/EDT correctly)
+    dt_et = dt_naive.replace(tzinfo=ZoneInfo("America/New_York"))
+
+    return dt_et.timestamp()
 def find_rsp_channels(data):
     """
     Finds all respiration channels.
@@ -53,8 +74,12 @@ def main():
     args = parser.parse_args()
     
     # Load Data
+    unix_start_time = None
     try:
         data = bioread.read_file(args.acq_file)
+        for i, m in enumerate(data.event_markers):
+            if i==0:
+                unix_start_time = extract_unix_time(m.text)
     except Exception as e:
         print(f"Error reading ACQ: {e}")
         sys.exit(1)
@@ -92,8 +117,9 @@ def main():
         # Assuming same FS for alignment
         for _, row in events_df.iterrows():
             label = row['event_label']
-            start_time = row['start_time']
-            start_idx = int(start_time * fs)
+            event_unix = row['start_time']  # now unix time
+            relative_time = event_unix - unix_start_time
+            start_idx = int(round(relative_time * fs))
             if 0 <= start_idx < len(combined):
                  combined.at[start_idx, 'Event_Label'] = label
 

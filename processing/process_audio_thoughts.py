@@ -14,7 +14,6 @@ def process_thoughts(wav_path, model):
     """
     Transcribe audio file using Whisper model.
     """
-    print(f"Processing {wav_path}...")
     
     segments, info = model.transcribe(
         wav_path.as_posix(),

@@ -1,19 +1,26 @@
 import argparse
 import pandas as pd
 import numpy as np
-import neurokit2 as nk
 import sys
 import os
 import glob
 import fnmatch
+from datetime import datetime
+
+if not hasattr(pd.DataFrame, "pad"):
+    pd.DataFrame.pad = pd.DataFrame.ffill
+
+import neurokit2 as nk
+
+unix_start_time = None
+
+def utc_string_to_unix(ts: str) -> float:
+    dt = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%f%z")
+    return dt.timestamp()
 
 def find_hex_rsp_data(hex_dir):
-    """
-    Scans for CSV files containing Hexoskin respiration columns.
-    Returns: data (dict of columns), fs (int)
-    """
-    
-    # scan for all csvs
+    global unix_start_time
+
     csv_files = []
     
     if os.path.isfile(hex_dir):
@@ -25,56 +32,52 @@ def find_hex_rsp_data(hex_dir):
                 if file.endswith(".csv"):
                     csv_files.append(os.path.join(root, file))
                 
-    # We want 'respiration_thoracic' and 'respiration_abdominal'
-    # Data structure to hold what we find
     found_data = {}
     
-    # Prioritize finding a single file with both, or multiple files
     for csv_file in csv_files:
         try:
-            # Read header
             df_head = pd.read_csv(csv_file, nrows=1)
             cols = df_head.columns
             
             if 'respiration_thoracic' in cols and 'Thoracic' not in found_data:
-                print(f"Found 'respiration_thoracic' in {csv_file}")
                 df = pd.read_csv(csv_file)
+                if unix_start_time is None and 'record_time' in df.columns:
+                    unix_start_time = utc_string_to_unix(df['record_time'].iloc[0])
                 found_data['Thoracic'] = df['respiration_thoracic'].values
                 
             if 'respiration_abdominal' in cols and 'Abdominal' not in found_data:
-                print(f"Found 'respiration_abdominal' in {csv_file}")
-                df = pd.read_csv(csv_file) # Re-read if same file, optimization possible but file size manageable
+                df = pd.read_csv(csv_file)
+                if unix_start_time is None and 'record_time' in df.columns:
+                    unix_start_time = utc_string_to_unix(df['record_time'].iloc[0])
                 found_data['Abdominal'] = df['respiration_abdominal'].values
                 
-        except Exception as e:
+        except Exception:
             pass
             
     if not found_data:
         return None, None
         
-    # Hexoskin Respiration is typically 256Hz (same as ECG) or sometimes 128Hz?
-    # Hexoskin API docs say: Respiration Raw is 256Hz.
-    fs = 256 
-    
+    fs = 256
     return found_data, fs
 
-def process_single_rsp(data, fs, suffix):
-    print(f"Processing {suffix} with sampling rate {fs}Hz")
-    
-    # Cleaning using khodadad2018 which is good for ambulatory
+def process_single_rsp(data, fs, suffix, events_df=None):
     try:
         signals, info = nk.rsp_process(data, sampling_rate=fs, method="khodadad2018")
-        
-        # Rename columns to be specific
-        # Standard: RSP_Raw, RSP_Clean, RSP_Amplitude, RSP_Rate, RSP_Phase, RSP_Peaks...
         rename_map = {col: f"{col}_{suffix}" for col in signals.columns}
         signals = signals.rename(columns=rename_map)
         
-        # Ensure Raw is there if NK didn't output it (it usually does as RSP_Raw)
+        if events_df is not None and not events_df.empty:
+            signals['Event_Label'] = None
+            for _, row in events_df.iterrows():
+                label = row['event_label']
+                event_unix = row['start_time']
+                relative_time = event_unix - unix_start_time
+                start_idx = int(round(relative_time * fs))
+                if 0 <= start_idx < len(signals):
+                    signals.at[start_idx, 'Event_Label'] = label
         
         return signals
-    except Exception as e:
-        print(f"Failed to process {suffix}: {e}")
+    except Exception:
         return pd.DataFrame()
 
 def main():
@@ -87,54 +90,35 @@ def main():
     
     args = parser.parse_args()
     
-    # Load Data
     data_dict, fs = find_hex_rsp_data(args.hex_path)
     
     if data_dict is None:
-        print("No Hexoskin Respiration data found.")
         sys.exit(1)
         
-    # Load Events
     events_df = None
     if args.events_file and os.path.exists(args.events_file):
-        print(f"Loading events from {args.events_file}")
         events_df = pd.read_csv(args.events_file)
         
     all_signals = []
     
-    # Process Thoracic
     if 'Thoracic' in data_dict:
-        sig_t = process_single_rsp(data_dict['Thoracic'], fs, "Thoracic")
+        sig_t = process_single_rsp(data_dict['Thoracic'], fs, "Thoracic", events_df)
         if not sig_t.empty:
             all_signals.append(sig_t)
             
-    # Process Abdominal
     if 'Abdominal' in data_dict:
-        sig_a = process_single_rsp(data_dict['Abdominal'], fs, "Abdominal")
+        sig_a = process_single_rsp(data_dict['Abdominal'], fs, "Abdominal", events_df)
         if not sig_a.empty:
             all_signals.append(sig_a)
             
     if not all_signals:
-        print("No respiration signals generated.")
         sys.exit(0)
         
     final_df = pd.concat(all_signals, axis=1)
     
-    # Add Events
-    if events_df is not None and not events_df.empty:
-        final_df['Event_Label'] = None
-        for _, row in events_df.iterrows():
-            label = row['event_label']
-            start_time = row['start_time']
-            start_idx = int(start_time * fs)
-            if 0 <= start_idx < len(final_df):
-                 final_df.at[start_idx, 'Event_Label'] = label
-
-    # Save
     output_filename = f"processed_hex_rsp_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
     output_file = os.path.join(args.output_dir, output_filename)
     final_df.to_csv(output_file, index=False)
-    print(f"Processed signals saved to {output_file}")
 
 if __name__ == "__main__":
     main()

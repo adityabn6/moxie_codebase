@@ -1,6 +1,9 @@
 import argparse
 import pandas as pd
 import numpy as np
+from datetime import datetime
+import re
+from zoneinfo import ZoneInfo
 
 # Monkey-patch numpy for neurokit2 compatibility with numpy 2.0
 if not hasattr(np, 'trapz'):
@@ -14,6 +17,25 @@ import bioread
 import neurokit2 as nk
 import sys
 import os
+
+def extract_unix_time(line: str) -> float:
+    match = re.search(
+        r'\b[A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2} \d{4} \d{2}:\d{2}:\d{2}\.\d{3}',
+        line
+    )
+    if not match:
+        raise ValueError("No timestamp found in line")
+
+    timestamp_str = match.group(0)
+
+    dt_naive = datetime.strptime(
+        timestamp_str, "%a %b %d %Y %H:%M:%S.%f"
+    )
+
+    # Attach Eastern Time zone (handles EST/EDT correctly)
+    dt_et = dt_naive.replace(tzinfo=ZoneInfo("America/New_York"))
+
+    return dt_et.timestamp()
 
 def find_eda_channel(data):
     """
@@ -37,7 +59,7 @@ def find_eda_channel(data):
         print(f" - {c.name}")
     return None
 
-def process_eda(channel, fs, events_df):
+def process_eda(channel, fs, events_df, recording_start_unix):
     """
     Process EDA signal.
     Returns DataFrame with processed signals (Clean, Phasic, Tonic, SCR Onsets, etc.)
@@ -57,13 +79,14 @@ def process_eda(channel, fs, events_df):
     
     # Add Event Label if matching
     if events_df is not None and not events_df.empty:
-        signals['Event_Label'] = None
-        for _, row in events_df.iterrows():
-            label = row['event_label']
-            start_time = row['start_time']
-            start_idx = int(start_time * fs)
-            if 0 <= start_idx < len(signals):
-                 signals.at[start_idx, 'Event_Label'] = label
+            signals['Event_Label'] = None
+            for _, row in events_df.iterrows():
+                label = row['event_label']
+                event_unix = row['start_time']  # now unix time
+                relative_time = event_unix - recording_start_unix
+                start_idx = int(round(relative_time * fs))
+                if 0 <= start_idx < len(signals):
+                     signals.at[start_idx, 'Event_Label'] = label
                  
     return signals
 
@@ -78,8 +101,12 @@ def main():
     args = parser.parse_args()
     
     # Load Data
+    unix_start_time = None
     try:
         data = bioread.read_file(args.acq_file)
+        for i, m in enumerate(data.event_markers):
+            if i==0:
+                unix_start_time = extract_unix_time(m.text)
     except Exception as e:
         print(f"Error reading ACQ: {e}")
         sys.exit(1)
@@ -98,7 +125,7 @@ def main():
         sys.exit(0) # Exit gracefully if just no channel
         
     # Process
-    signals_df = process_eda(eda_chan, data.samples_per_second, events_df)
+    signals_df = process_eda(eda_chan, data.samples_per_second, events_df, unix_start_time)
     
     if not signals_df.empty:
         output_filename = f"processed_eda_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
