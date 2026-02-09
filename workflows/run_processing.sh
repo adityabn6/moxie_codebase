@@ -116,9 +116,9 @@ elif [ "$DEVICE" == "hexoskin" ]; then
     # Hexoskin scripts expect --hex_path (which handles dir or file now)
     CMD="$CMD --hex_path \"$FILE_PATH\""
 
-elif [ "$DEVICE" == "Audio" ]; then
+elif [ "$DEVICE" == "audio" ]; then
     CMD="$CMD --wav_file \"$FILE_PATH\""
-elif [ "$DEVICE" == "Research_Ring" ]; then
+elif [ "$DEVICE" == "research_ring" ]; then
     # Research Ring processing (if any) can be added here
     CMD="$CMD --ring_path \"$FILE_PATH\""
 fi

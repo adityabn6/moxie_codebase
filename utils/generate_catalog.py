@@ -81,7 +81,7 @@ def scan_participants_modality_based(root_dir):
                         catalog_data.append({
                             "participant_id": pid,
                             "visit_type": visit,
-                            "device": "Audio",
+                            "device": "audio",
                             "modality": "thoughts",
                             "file_path": wav_file
                         })
@@ -117,7 +117,7 @@ def scan_participants_modality_based(root_dir):
                                 catalog_data.append({
                                     "participant_id": pid,
                                     "visit_type": visit,
-                                    "device": "Research_Ring",
+                                    "device": "research_ring",
                                     "modality": mod,
                                     "file_path": final_research_ring_folder
                                 })
