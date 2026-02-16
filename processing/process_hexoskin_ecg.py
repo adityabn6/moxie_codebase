@@ -120,7 +120,7 @@ def main():
     results = process_hex_ecg(data, fs, events_df)
 
     if not results.empty:
-        output_filename = f"processed_hex_ecg_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
+        output_filename = f"processed_hexoskin_ecg_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
         output_file = os.path.join(args.output_dir, output_filename)
         results.to_csv(output_file, index=False)
 

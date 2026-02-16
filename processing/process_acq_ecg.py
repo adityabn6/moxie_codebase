@@ -127,7 +127,7 @@ def main():
     
     # Save - using 'processed' prefix
     # Save - using 'processed' prefix
-    output_filename = f"processed_ecg_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
+    output_filename = f"processed_acq_ecg_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
     output_file = os.path.join(args.output_dir, output_filename)
     
     # Save slightly compressed or just raw csv? 

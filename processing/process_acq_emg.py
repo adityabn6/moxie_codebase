@@ -139,7 +139,7 @@ def main():
                  final_df.at[start_idx, 'Event_Label'] = label
                  
     # Save
-    output_filename = f"processed_emg_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
+    output_filename = f"processed_acq_emg_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
     output_file = os.path.join(args.output_dir, output_filename)
     final_df.to_csv(output_file, index=False)
     print(f"Processed EMG signals saved to {output_file}")

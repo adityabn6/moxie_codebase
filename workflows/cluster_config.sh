@@ -13,6 +13,8 @@ export VENV_PATH="$PROJECT_ROOT/.venv"
 export CATALOG_FILE="$PROJECT_ROOT/processing_catalog.csv"
 export OUTPUT_ROOT="$PROJECT_ROOT/Processed_Data"
 export SCRIPT_DIR="$PROJECT_ROOT/processing"
+export QUALITY_SCRIPT_DIR="$PROJECT_ROOT/quality
+
 
 # Ensure output directory exists when config is loaded
 mkdir -p "$OUTPUT_ROOT"

@@ -125,7 +125,7 @@ def main():
 
     # Save
     if not combined.empty:
-        output_filename = f"processed_rsp_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
+        output_filename = f"processed_acq_rsp_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
         output_file = os.path.join(args.output_dir, output_filename)
         combined.to_csv(output_file, index=False)
         print(f"Processed RSP signals saved to {output_file}")

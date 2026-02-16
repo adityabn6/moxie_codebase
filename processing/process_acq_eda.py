@@ -128,7 +128,7 @@ def main():
     signals_df = process_eda(eda_chan, data.samples_per_second, events_df, unix_start_time)
     
     if not signals_df.empty:
-        output_filename = f"processed_eda_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
+        output_filename = f"processed_acq_eda_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
         output_file = os.path.join(args.output_dir, output_filename)
         signals_df.to_csv(output_file, index=False)
         print(f"Processed EDA signals saved to {output_file}")

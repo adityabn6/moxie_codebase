@@ -116,7 +116,7 @@ def main():
         
     final_df = pd.concat(all_signals, axis=1)
     
-    output_filename = f"processed_hex_rsp_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
+    output_filename = f"processed_hexoskin_rsp_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
     output_file = os.path.join(args.output_dir, output_filename)
     final_df.to_csv(output_file, index=False)
 

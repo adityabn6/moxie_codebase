@@ -156,12 +156,12 @@ def main():
     signals_df = process_bp(data[1].values, fs, events_df, unix_start_time)
 
     if not signals_df.empty:
-        output_filename = f"processed_ppg_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
+        output_filename = f"processed_research_ring_ppg_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"
         output_file = os.path.join(args.output_dir, output_filename)
         signals_df.to_csv(output_file, index=False)
-        print(f"Processed EDA signals saved to {output_file}")
+        print(f"Processed PPG signals saved to {output_file}")
     else:
-        print("No processed EDA data generated.")
+        print("No processed PPG data generated.")
 
 
 if __name__ == "__main__":
