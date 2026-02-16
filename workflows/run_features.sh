@@ -18,7 +18,9 @@
 # --- CONFIGURATION & ENVIRONMENT ---
 # Load variables from cluster_config.sh
 # Note: Since this script runs from OnDemand's temporary job dir, we point to the absolute path.
-CONFIG_FILE="/home/adityabn/Projects/moxie_codebase/workflows/cluster_config.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="$SCRIPT_DIR/cluster_config.sh"
+
 
 if [ -f "$CONFIG_FILE" ]; then
     source "$CONFIG_FILE"
