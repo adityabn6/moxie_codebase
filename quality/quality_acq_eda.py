@@ -182,7 +182,7 @@ def main():
 
     output_path = os.path.join(
         args.output_dir,
-        f"{args.participant_id}_{args.visit_type}_EDA_QC.html"
+        f"{args.participant_id}_{args.visit_type}_acq_EDA_QC.html"
     )
 
     plot_bokeh_signal(

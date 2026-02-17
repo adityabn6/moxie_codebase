@@ -154,6 +154,9 @@ def main():
 
     # Process (assuming column 1 is EDA values)
     signals_df = process_bp(data[1].values, fs, events_df, unix_start_time)
+    signals_df["fs"] = np.nan  # create the column with NaNs
+    signals_df.loc[0, "fs"] = fs  # set the first row to the framerate
+
 
     if not signals_df.empty:
         output_filename = f"processed_research_ring_ppg_{args.participant_id}_{args.visit_type.replace(' ', '_')}.csv"

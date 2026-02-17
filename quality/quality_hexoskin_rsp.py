@@ -9,7 +9,7 @@ from bokeh.layouts import column
 from bokeh.models import ColumnDataSource, RangeTool, Span, Label
 
 
-def plot_bokeh_rsp(signals_df, fs, title, output_path, downsample_fs=10, window_seconds=60):
+def plot_bokeh_rsp(signals_df, fs, title, output_path, downsample_fs=1, window_seconds=60):
 
     if signals_df is None or signals_df.empty:
         print("No signal data available.")
@@ -45,10 +45,10 @@ def plot_bokeh_rsp(signals_df, fs, title, output_path, downsample_fs=10, window_
     clean2_idx = 12
     peaks2_idx = 20  # zero/one column for channel 2 peaks
 
-    p.line("time", df_down.columns[raw1_idx], source=source, legend_label="Raw Ch1")
-    p.line("time", df_down.columns[clean1_idx], source=source, line_width=2, legend_label="Clean Ch1")
-    p.line("time", df_down.columns[raw2_idx], source=source, legend_label="Raw Ch2", line_color="green")
-    p.line("time", df_down.columns[clean2_idx], source=source, line_width=2, legend_label="Clean Ch2", line_color="darkgreen")
+    p.line("time", df_down.columns[raw1_idx], source=source, legend_label="Raw Thoracic")
+    p.line("time", df_down.columns[clean1_idx], source=source, line_width=2, legend_label="Clean Thoracic")
+    p.line("time", df_down.columns[raw2_idx], source=source, legend_label="Raw Abdominal", line_color="green")
+    p.line("time", df_down.columns[clean2_idx], source=source, line_width=2, legend_label="Clean Abdominal", line_color="darkgreen")
 
     # -------------------------
     # Peaks (full resolution)
@@ -122,21 +122,19 @@ def main():
 
     os.makedirs(args.output_dir, exist_ok=True)
 
-    try:
-        data_acq = bioread.read_file(args.file_path)
-        sampling_rate = data_acq.samples_per_second
-    except Exception as e:
-        print(f"Error reading ACQ file: {e}")
-        return
+    
 
     signal = pd.read_csv(args.input_file, low_memory=False)
 
+    
+    
+
     output_path = os.path.join(
         args.output_dir,
-        f"{args.participant_id}_{args.visit_type}_acq_RSP_QC.html"
+        f"{args.participant_id}_{args.visit_type}_hex_RSP_QC.html"
     )
 
-    plot_bokeh_rsp(signal, sampling_rate,
+    plot_bokeh_rsp(signal, 128,
                    title=f"RSP Signal for {args.participant_id} - {args.visit_type}",
                    output_path=output_path)
 

@@ -57,7 +57,7 @@ def find_hex_rsp_data(hex_dir):
     if not found_data:
         return None, None
         
-    fs = 256
+    fs = 128
     return found_data, fs
 
 def process_single_rsp(data, fs, suffix, events_df=None):
