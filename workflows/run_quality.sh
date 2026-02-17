@@ -60,14 +60,22 @@ echo "  Participant: $PID"
 echo "  Visit: $VISIT"
 echo "  Device: $DEVICE"
 echo "  Modality: $MODALITY"
+echo "  File: $FILE_PATH"
 
-# Construct output directory (same as processing layer)
+
+# Construct output directory
 OUTPUT_DIR="$OUTPUT_ROOT/$PID/$VISIT"
 
-# Replace spaces in visit with underscores (must match processing naming)
+
+
+if [ ! -f "$EVENTS_FILE" ]; then
+    echo "Warning: Events file not found at $EVENTS_FILE"
+fi
+
+# Replace spaces in visit with underscores
 VISIT_SAFE=$(echo "$VISIT" | tr ' ' '_')
 
-# Construct processed filename
+# Construct processed filename (Layer 2 output)
 PROCESSED_FILE="$OUTPUT_DIR/processed_${DEVICE}_${MODALITY}_${PID}_${VISIT_SAFE}.csv"
 
 echo "  QC Input File: $PROCESSED_FILE"
@@ -108,7 +116,8 @@ CMD="python $PYTHON_SCRIPT \
     --participant_id $PID \
     --visit_type \"$VISIT\" \
     --input_file \"$PROCESSED_FILE\" \
-    --output_dir \"$OUTPUT_DIR\""
+    --output_dir \"$OUTPUT_DIR\" \
+    --file_path \"$FILE_PATH\""
 
 echo "Running: $CMD"
 eval $CMD
