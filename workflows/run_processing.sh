@@ -85,10 +85,10 @@ case "$DEVICE" in
     "hexoskin")
         PYTHON_SCRIPT="$SCRIPT_DIR/process_hexoskin_${MODALITY}.py"
         ;;
-    "Audio")
+    "audio")
         PYTHON_SCRIPT="$SCRIPT_DIR/process_audio_${MODALITY}.py"
         ;;
-    "Research_Ring")
+    "research_ring")
         PYTHON_SCRIPT="$SCRIPT_DIR/process_research_ring_${MODALITY}.py"
         ;;
     *)
