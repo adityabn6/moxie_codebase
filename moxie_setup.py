@@ -29,7 +29,7 @@ results = {
     "analysis_repo": None,
     "labels_pipeline": {"ok": 0, "total": 28},
     "labels_analysis": {"ok": 0, "total": 28},
-    "milestones": {"ok": 0, "total": 7, "map": {}},  # title → number
+    "milestones": {"ok": 0, "total": 10, "map": {}},  # title → number
     "templates": {"research_question": False, "milestone_task": False, "manuscript": False},
     "issues": [],
     "project": {"id": None, "url": None, "fields": 0, "views": 0, "linked": 0, "issues_added": 0},
@@ -353,7 +353,7 @@ TEMPLATE_RQ = """\
 name: Research Question
 about: Define a specific scientific question for MOXIE analysis
 title: "[QUESTION] "
-labels: "type: research-question, phase: scoping"
+labels: ["type: research-question", "phase: scoping"]
 assignees: ''
 ---
 
@@ -440,7 +440,7 @@ TEMPLATE_MS = """\
 name: Manuscript
 about: Track a paper from concept to submission
 title: "[PAPER] "
-labels: "type: manuscript, phase: scoping"
+labels: ["type: manuscript", "phase: scoping"]
 assignees: ''
 ---
 
@@ -791,10 +791,6 @@ def create_project(owner_id):
 
 def add_field(pid, name, data_type, options=None):
     """Add a custom field. data_type: TEXT, DATE, SINGLE_SELECT"""
-    q = """mutation($pid: ID!, $name: String!, $dtype: ProjectV2CustomFieldType!) {
-      addProjectV2DraftIssue: __typename
-    }"""
-
     if data_type == "SINGLE_SELECT" and options:
         q = """mutation($pid: ID!, $name: String!, $opts: [ProjectV2SingleSelectFieldOptionInput!]!) {
           createProjectV2Field(input: {projectId: $pid, name: $name, dataType: SINGLE_SELECT, singleSelectOptions: $opts}) {
