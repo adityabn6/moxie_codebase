@@ -823,11 +823,62 @@ def add_field(pid, name, data_type, options=None):
     return True
 
 
+STATUS_OPTIONS = [
+    {"name": "Scoping",   "color": "BLUE",   "description": "Question not yet fully defined — in planning"},
+    {"name": "Data Prep", "color": "PURPLE", "description": "Waiting on or actively preparing data/pipeline output"},
+    {"name": "Analysis",  "color": "GREEN",  "description": "Active analysis or coding in progress"},
+    {"name": "Writing",   "color": "YELLOW", "description": "Manuscript, report, or documentation writing"},
+    {"name": "Review",    "color": "ORANGE", "description": "Under internal or external review"},
+    {"name": "Done",      "color": "GREEN",  "description": "Complete"},
+]
+
+
+def update_status_field(pid):
+    """Replace built-in Status options with MOXIE workflow stages."""
+    print(f"  Updating Status field options...")
+    # Get Status field ID
+    q = """query($pid: ID!) {
+      node(id: $pid) {
+        ... on ProjectV2 {
+          fields(first: 30) {
+            nodes { ... on ProjectV2SingleSelectField { id name } }
+          }
+        }
+      }
+    }"""
+    d = graphql(q, {"pid": pid})
+    fid = None
+    try:
+        for n in d["data"]["node"]["fields"]["nodes"]:
+            if n.get("name") == "Status":
+                fid = n["id"]; break
+    except Exception:
+        pass
+    if not fid:
+        print("    ✗ Status field not found"); return False
+
+    q2 = """mutation($fid: ID!, $opts: [ProjectV2SingleSelectFieldOptionInput!]!) {
+      updateProjectV2Field(input: {fieldId: $fid, singleSelectOptions: $opts}) {
+        projectV2Field { ... on ProjectV2SingleSelectField { options { name } } }
+      }
+    }"""
+    d2 = graphql(q2, {"fid": fid, "opts": STATUS_OPTIONS})
+    if "errors" in d2:
+        print(f"    ✗ {d2['errors'][0].get('message', d2['errors'])}"); return False
+    opts = [o["name"] for o in d2["data"]["updateProjectV2Field"]["projectV2Field"]["options"]]
+    print(f"    ✓ Status options: {opts}")
+    return True
+
+
 def create_project_fields(pid):
     print(f"  Creating custom fields...")
     fields_created = 0
 
-    # Check existing fields
+    # Update built-in Status field first
+    if update_status_field(pid):
+        fields_created += 1  # counts Status as configured
+
+    # Check existing custom fields
     q = """query($pid: ID!) {
       node(id: $pid) {
         ... on ProjectV2 {
@@ -850,13 +901,13 @@ def create_project_fields(pid):
     except Exception:
         pass
 
+    # 4 custom fields (Phase removed — Status used instead)
     field_defs = [
-        ("Track",        "SINGLE_SELECT", ["Breathing", "Arousal-Valence", "Digital Twin", "Pipeline"]),
-        ("Phase",        "SINGLE_SELECT", ["Scoping", "Data Prep", "Analysis", "Writing", "Review", "Done"]),
-        ("Priority",     "SINGLE_SELECT", ["P1 Critical", "P2 High", "P3 Backlog"]),
-        ("Effort",       "SINGLE_SELECT", ["Small", "Medium", "Large", "Needs Scoping"]),
-        ("Manuscript",   "TEXT",          None),
-        ("Target Date",  "DATE",          None),
+        ("Track",       "SINGLE_SELECT", ["Breathing", "Arousal-Valence", "Digital Twin", "Pipeline"]),
+        ("Priority",    "SINGLE_SELECT", ["P1 Critical", "P2 High", "P3 Backlog"]),
+        ("Effort",      "SINGLE_SELECT", ["Small", "Medium", "Large", "Needs Scoping"]),
+        ("Manuscript",  "TEXT",          None),
+        ("Target Date", "DATE",          None),
     ]
 
     for name, dtype, opts in field_defs:
@@ -869,7 +920,7 @@ def create_project_fields(pid):
             fields_created += 1
 
     results["project"]["fields"] = fields_created
-    print(f"  ✓ {fields_created}/6 fields ready")
+    print(f"  ✓ {fields_created}/6 fields ready (Status + 5 custom)")
 
 
 def create_project_views(pid):
@@ -1007,29 +1058,29 @@ def main():
         init_readme("moxie-pipeline", PIPELINE_README)
 
     analysis_url = create_repo(
-        "moxie-analysis",
+        "moxie-analyses",
         "Research analysis, statistical modeling, and manuscript code for the MOXIE stress physiology study",
         ["stress-physiology", "hrv", "respiration", "reinforcement-learning", "bioinformatics", "psychophysiology"],
     )
     results["analysis_repo"] = analysis_url
     if analysis_url:
-        init_readme("moxie-analysis", ANALYSIS_README)
+        init_readme("moxie-analyses", ANALYSIS_README)
 
     # ── Step 2: Labels ────────────────────────────────────────────
     results["labels_pipeline"]["ok"] = setup_labels("moxie-pipeline")
-    results["labels_analysis"]["ok"] = setup_labels("moxie-analysis")
+    results["labels_analysis"]["ok"] = setup_labels("moxie-analyses")
 
     # ── Step 3: Milestones ────────────────────────────────────────
-    results["milestones"]["ok"] = create_milestones("moxie-analysis")
+    results["milestones"]["ok"] = create_milestones("moxie-analyses")
 
     # ── Step 4: Issue Templates ───────────────────────────────────
-    create_issue_templates("moxie-analysis")
+    create_issue_templates("moxie-analyses")
 
     # ── Step 5: Folder Structure ──────────────────────────────────
-    create_folder_structure("moxie-analysis")
+    create_folder_structure("moxie-analyses")
 
     # ── Step 6: Starter Issues ────────────────────────────────────
-    create_issues("moxie-analysis")
+    create_issues("moxie-analyses")
 
     # ── Step 7: Project Board ─────────────────────────────────────
     print(f"\n[Step 7] GitHub Project Board (GraphQL)")
@@ -1043,14 +1094,14 @@ def main():
 
         print(f"  Linking repos to project...")
         r1 = link_repo_to_project(pid, "moxie-pipeline")
-        r2 = link_repo_to_project(pid, "moxie-analysis")
+        r2 = link_repo_to_project(pid, "moxie-analyses")
         results["project"]["linked"] = int(r1) + int(r2)
 
         print(f"  Adding issues to project...")
         added = 0
         for issue in results["issues"]:
             if issue.get("number"):
-                ok = add_issue_to_project(pid, "moxie-analysis", issue["number"])
+                ok = add_issue_to_project(pid, "moxie-analyses", issue["number"])
                 if ok:
                     added += 1
                     print(f"    ✓ Added issue #{issue['number']}: {issue['title'][:50]}")
@@ -1065,34 +1116,34 @@ def main():
     print("REPOSITORIES")
     tick = lambda v: "✓" if v else "✗"
     print(f"  {tick(results['pipeline_repo'])} moxie-pipeline created — {results['pipeline_repo'] or 'FAILED'}")
-    print(f"  {tick(results['analysis_repo'])} moxie-analysis created — {results['analysis_repo'] or 'FAILED'}")
+    print(f"  {tick(results['analysis_repo'])} moxie-analyses created — {results['analysis_repo'] or 'FAILED'}")
     print()
     print("LABELS (moxie-pipeline)")
     lp = results["labels_pipeline"]
     print(f"  {tick(lp['ok'] == lp['total'])} {lp['ok']}/{lp['total']} labels created successfully")
     print()
-    print("LABELS (moxie-analysis)")
+    print("LABELS (moxie-analyses)")
     la = results["labels_analysis"]
     print(f"  {tick(la['ok'] == la['total'])} {la['ok']}/{la['total']} labels created successfully")
     print()
-    print("MILESTONES (moxie-analysis)")
+    print("MILESTONES (moxie-analyses)")
     m = results["milestones"]
     print(f"  {tick(m['ok'] == m['total'])} {m['ok']}/{m['total']} milestones created")
     print()
-    print("ISSUE TEMPLATES (moxie-analysis)")
+    print("ISSUE TEMPLATES (moxie-analyses)")
     t = results["templates"]
     print(f"  {tick(t['research_question'])} research_question.md")
     print(f"  {tick(t['milestone_task'])} milestone_task.md")
     print(f"  {tick(t['manuscript'])} manuscript.md")
     print()
-    print("STARTER ISSUES (moxie-analysis)")
+    print("STARTER ISSUES (moxie-analyses)")
     for i, issue in enumerate(results["issues"], 1):
         print(f"  {tick(issue.get('url'))} Issue {i}: {issue['title'][:55]} — {issue.get('url', 'FAILED')}")
     print()
     print("GITHUB PROJECT")
     p = results["project"]
     print(f"  {tick(p['id'])} 'MOXIE Research' project created — {p['url'] or 'FAILED'}")
-    print(f"  {tick(p['fields'] >= 6)} {p['fields']}/6 custom fields added")
+    print(f"  {tick(p['fields'] >= 5)} {p['fields']}/5 custom fields added (Track, Priority, Effort, Manuscript, Target Date)")
     print(f"  {tick(p['views'] >= 5)} {p['views']}/5 views configured")
     print(f"  {tick(p['linked'] == 2)} Both repos linked to project")
     print(f"  {tick(p['issues_added'] == 5)} {p['issues_added']}/5 starter issues added to project")
