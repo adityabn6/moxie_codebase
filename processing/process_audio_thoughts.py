@@ -14,7 +14,6 @@ def process_thoughts(wav_path, model):
     """
     Transcribe audio file using Whisper model.
     """
-    print(f"Processing {wav_path}...")
     
     segments, info = model.transcribe(
         wav_path.as_posix(),
@@ -59,7 +58,7 @@ def main():
     txt_path = process_thoughts(wav_path, model)
     
     # Move to output directory with proper naming
-    output_filename = f"processed_thoughts_{args.participant_id}_{args.visit_type.replace(' ', '_')}.txt"
+    output_filename = f"processed_audio_thoughts_{args.participant_id}_{args.visit_type.replace(' ', '_')}.txt"
     output_file = os.path.join(args.output_dir, output_filename)
     
     # Copy the transcript to output directory

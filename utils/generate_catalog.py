@@ -4,7 +4,7 @@ import glob
 import argparse
 
 # Configuration
-DATA_ROOT = r"N:\Aditya\Participant Data"
+DATA_ROOT = r'/Volumes/lsa-annelism/MOXIE_Study/Participant Data'
 # Save to repository root (one level up from utils)
 OUTPUT_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "processing_catalog.csv")
 
@@ -71,16 +71,58 @@ def scan_participants_modality_based(root_dir):
                 # --- THOUGHT LISTING ---
                 thought_path = os.path.join(visit_path, "Thought Listing")
                 if os.path.exists(thought_path):
-                    # Find all .wav files
-                    wav_files = glob.glob(os.path.join(thought_path, "*.wav"))
+                    # Find all .wav files (case-insensitive)
+                    wav_files = []
+                    for file in os.listdir(thought_path):
+                        if file.lower().endswith('.wav'):
+                            wav_files.append(os.path.join(thought_path, file))
+                    
                     for wav_file in wav_files:
                         catalog_data.append({
                             "participant_id": pid,
                             "visit_type": visit,
-                            "device": "Audio",
-                            "modality": "Thoughts",
+                            "device": "audio",
+                            "modality": "thoughts",
                             "file_path": wav_file
                         })
+                # --- RESEARCH RING ---
+                research_ring_string = None
+                if visit == "TSST Visit":
+                    research_ring_string = "TSST_Research_Ring"
+                elif visit == "PDST Visit":
+                    research_ring_string = "PDST_Research_Ring"
+
+                if research_ring_string:
+                    # Look for folders inside visit_path that start with research_ring_string
+                    matching_folders = [
+                        os.path.join(visit_path, f)
+                        for f in os.listdir(visit_path)
+                        if os.path.isdir(os.path.join(visit_path, f)) and f.startswith(research_ring_string)
+                    ]
+                    
+                    if matching_folders:
+                        # Take the first one (or handle multiple if needed)
+                        final_research_ring_folder = matching_folders[0]
+                        signal_files_folder = os.path.join(final_research_ring_folder, "signal_files")
+                        final_folder = [
+                            os.path.join(signal_files_folder, d)
+                            for d in os.listdir(signal_files_folder)
+                            if os.path.isdir(os.path.join(signal_files_folder, d)) and d.startswith("Senstream")
+                        ]
+                        # Optionally add it to the catalog
+                        if final_folder:
+                            final_research_ring_folder = final_folder[0]
+                            modalities = ['eda', 'ppg', 'temp']
+                            for mod in modalities:
+                                catalog_data.append({
+                                    "participant_id": pid,
+                                    "visit_type": visit,
+                                    "device": "research_ring",
+                                    "modality": mod,
+                                    "file_path": final_research_ring_folder
+                                })
+                    
+
 
     return pd.DataFrame(catalog_data)
 

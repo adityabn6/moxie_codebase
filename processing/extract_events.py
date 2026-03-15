@@ -3,38 +3,62 @@ import pandas as pd
 import numpy as np
 import argparse
 import os
+from datetime import datetime, timedelta
+import re
+
+from datetime import datetime
+from zoneinfo import ZoneInfo
+import re
+
+def extract_unix_time(line: str) -> float:
+    match = re.search(
+        r'\b[A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2} \d{4} \d{2}:\d{2}:\d{2}\.\d{3}',
+        line
+    )
+    if not match:
+        raise ValueError("No timestamp found in line")
+
+    timestamp_str = match.group(0)
+
+    dt_naive = datetime.strptime(
+        timestamp_str, "%a %b %d %Y %H:%M:%S.%f"
+    )
+
+    # Attach Eastern Time zone (handles EST/EDT correctly)
+    dt_et = dt_naive.replace(tzinfo=ZoneInfo("America/New_York"))
+
+    return dt_et.timestamp()
+
+
 
 def extract_events(acq_file, output_dir):
     print(f"Reading {acq_file}...")
     data = bioread.read_file(acq_file)
-    
-    # Identify Event Channels (Digital or specific labels)
-    # Moxie study typically uses digital channels for markers: 'Digital input', 'Label', etc.
-    # We look for channels with "Digital" or "Event" in name, or specific logic.
-    
-    # Common convention: Digital channels have 0/5V or 0/1 logic.
-    # We will look for changes in digital channels.
     
     events_list = []
     
     # 1. Check Named Event Markers (Text Labels)
     if hasattr(data, 'event_markers') and data.event_markers:
         print(f"Found {len(data.event_markers)} text markers.")
-        # Use FS from first channel for time conversion
-        # (Acq files can have mixed FS, but usually markers are global or linked to global time)
-        # Bioread markers have 'sample_index' relative to the file.
         fs = data.channels[0].samples_per_second if data.channels else 2000.0
-        
-        for m in data.event_markers:
+        unix_time = None
+        for i, m in enumerate(data.event_markers):
+            if i==0:
+                unix_time = extract_unix_time(m.text)
+            if m.text is None:
+                continue
+            if m.text.startswith("ME") or m.text.startswith("NBP") or m.text.startswith("BPI"):
+                continue  # Skip markers starting with ME or NBP
+
             # Clean label
-            label = m.text.strip() if m.text else "Unknown_Marker"
+            label = m.text.strip()
             # Calculate time
             start_time = m.sample_index / fs
-            
+
             events_list.append({
                 "event_label": label,
-                "start_time": start_time,
-                "duration": 0, # Point event by default
+                "start_time": start_time + unix_time,
+                "duration": 0,  # Point event by default
                 "source_channel": "Marker"
             })
 
@@ -44,7 +68,6 @@ def extract_events(acq_file, output_dir):
             print(f"Processing Event Channel: {channel.name}")
             vals = channel.data
             # Detect rising edges
-             # Threshold
             threshold = (np.max(vals) + np.min(vals)) / 2
             binary = (vals > threshold).astype(int)
             diff = np.diff(binary, prepend=0)
@@ -60,19 +83,17 @@ def extract_events(acq_file, output_dir):
                     "source_channel": channel.name
                 })
     
-    # Ensure output dir
+    # Ensure output dir exists
     os.makedirs(output_dir, exist_ok=True)
     
     df = pd.DataFrame(events_list)
     output_file = os.path.join(output_dir, "events.csv")
     
     if not df.empty:
-        # Deduplicate or clean?
         df.to_csv(output_file, index=False)
         print(f"Extracted {len(df)} events to {output_file}")
     else:
         print("No events found. Creating empty key file.")
-        # Create empty with headers
         pd.DataFrame(columns=["event_label", "start_time", "duration"]).to_csv(output_file, index=False)
 
 if __name__ == "__main__":
